@@ -1,0 +1,442 @@
+{
+  "schema_version": 1,
+  "dataset": {
+    "name": "hotpotqa-demo-100",
+    "path": "examples/openrouter-hotpotqa/hotpotqa_demo_100.jsonl",
+    "rows": 100,
+    "description": "Illustration only. First 100 rows of the paper's frozen HotpotQA distractor slice, one fresh LLM-summary artifact per row, two hosted readers. Not paper evidence and not a verdict about other readers or compressors.",
+    "hints": {
+      "source": "hotpotqa_distractor_500_v1",
+      "language": "en"
+    },
+    "hint_fields": [
+      "question_type",
+      "difficulty"
+    ]
+  },
+  "comparison": {
+    "current": "qwen/qwen-2.5-7b-instruct",
+    "candidate": "meta-llama/llama-3.3-70b-instruct"
+  },
+  "release_gate": {
+    "retention_alert_threshold": 0.75,
+    "fail_on_outcomes": []
+  },
+  "metrics": [
+    {
+      "metric": "exact_match",
+      "current_reader": "qwen/qwen-2.5-7b-instruct",
+      "candidate_reader": "meta-llama/llama-3.3-70b-instruct",
+      "rows": 100,
+      "current_raw": 0.53,
+      "current_compressed": 0.64,
+      "current_compression_gain": 0.10999999999999999,
+      "candidate_raw": 0.62,
+      "candidate_compressed": 0.67,
+      "candidate_compression_gain": 0.050000000000000044,
+      "raw_upgrade": 0.08999999999999997,
+      "compressed_upgrade": 0.030000000000000027,
+      "upgrade_retention": 0.33333333333333376,
+      "raw_upgrade_interval": [
+        -0.0002499999999999858,
+        0.18
+      ],
+      "compressed_upgrade_interval": [
+        -0.05,
+        0.11
+      ],
+      "retention_interval": [
+        -0.5,
+        1.1666666666666667
+      ],
+      "order_reversed": false,
+      "current_rescue": 0.16,
+      "current_damage": 0.09433962264150944,
+      "candidate_rescue": 0.08,
+      "candidate_damage": 0.04838709677419355,
+      "retention_alert_threshold": 0.75,
+      "outcome": "observed-upgrade-attenuated",
+      "panel": null,
+      "slices": [
+        {
+          "metric": "exact_match",
+          "field": "question_type",
+          "value": "bridge",
+          "rows": 82,
+          "raw_upgrade": 0.13414634146341464,
+          "compressed_upgrade": 0.04878048780487805,
+          "retention": 0.36363636363636365
+        },
+        {
+          "metric": "exact_match",
+          "field": "question_type",
+          "value": "comparison",
+          "rows": 18,
+          "raw_upgrade": -0.1111111111111111,
+          "compressed_upgrade": -0.05555555555555555,
+          "retention": 0.5
+        },
+        {
+          "metric": "exact_match",
+          "field": "difficulty",
+          "value": "hard",
+          "rows": 100,
+          "raw_upgrade": 0.09,
+          "compressed_upgrade": 0.03,
+          "retention": 0.3333333333333333
+        }
+      ],
+      "changed_examples": [
+        {
+          "example_id": "hpqa-0003",
+          "question_type": "bridge",
+          "current_transition": "unchanged",
+          "candidate_transition": "damaged",
+          "current_raw_answer": "New York City",
+          "current_compressed_answer": "New York City",
+          "candidate_raw_answer": "Rome",
+          "candidate_compressed_answer": "New York City"
+        },
+        {
+          "example_id": "hpqa-0004",
+          "question_type": "bridge",
+          "current_transition": "rescued",
+          "candidate_transition": "unchanged",
+          "current_raw_answer": "4505",
+          "current_compressed_answer": "35,124",
+          "candidate_raw_answer": "35,124",
+          "candidate_compressed_answer": "35,124"
+        },
+        {
+          "example_id": "hpqa-0008",
+          "question_type": "bridge",
+          "current_transition": "damaged",
+          "candidate_transition": "unchanged",
+          "current_raw_answer": "A41",
+          "current_compressed_answer": "A5117",
+          "candidate_raw_answer": "A41",
+          "candidate_compressed_answer": "A41"
+        },
+        {
+          "example_id": "hpqa-0010",
+          "question_type": "bridge",
+          "current_transition": "rescued",
+          "candidate_transition": "rescued",
+          "current_raw_answer": "12430",
+          "current_compressed_answer": "48,982",
+          "candidate_raw_answer": "648,318",
+          "candidate_compressed_answer": "48,982"
+        },
+        {
+          "example_id": "hpqa-0012",
+          "question_type": "bridge",
+          "current_transition": "rescued",
+          "candidate_transition": "rescued",
+          "current_raw_answer": "Sasanian Empire",
+          "current_compressed_answer": "Parthian Empire",
+          "candidate_raw_answer": "Sasanian Empire",
+          "candidate_compressed_answer": "Parthian Empire"
+        },
+        {
+          "example_id": "hpqa-0019",
+          "question_type": "bridge",
+          "current_transition": "rescued",
+          "candidate_transition": "unchanged",
+          "current_raw_answer": "Gay Byrne",
+          "current_compressed_answer": "The Late Late Show",
+          "candidate_raw_answer": "The Late Late Show",
+          "candidate_compressed_answer": "The Late Late Show"
+        },
+        {
+          "example_id": "hpqa-0022",
+          "question_type": "bridge",
+          "current_transition": "rescued",
+          "candidate_transition": "unchanged",
+          "current_raw_answer": "Steve Arbuckle",
+          "current_compressed_answer": "Douglas Jackson",
+          "candidate_raw_answer": "Douglas Jackson",
+          "candidate_compressed_answer": "Douglas Jackson"
+        },
+        {
+          "example_id": "hpqa-0024",
+          "question_type": "bridge",
+          "current_transition": "unchanged",
+          "candidate_transition": "damaged",
+          "current_raw_answer": "1984 South Asian Games",
+          "current_compressed_answer": "1984 South Asian Games",
+          "candidate_raw_answer": "1984 South Asian Games",
+          "candidate_compressed_answer": "South Asian Games"
+        },
+        {
+          "example_id": "hpqa-0026",
+          "question_type": "bridge",
+          "current_transition": "rescued",
+          "candidate_transition": "unchanged",
+          "current_raw_answer": "Catherine Cyran",
+          "current_compressed_answer": "Martha Coolidge",
+          "candidate_raw_answer": "Martha Coolidge",
+          "candidate_compressed_answer": "Martha Coolidge"
+        },
+        {
+          "example_id": "hpqa-0042",
+          "question_type": "bridge",
+          "current_transition": "rescued",
+          "candidate_transition": "unchanged",
+          "current_raw_answer": "Sungkyunkwan Scandal",
+          "current_compressed_answer": "Queen In-hyun's Man",
+          "candidate_raw_answer": "Queen In-hyun's Man",
+          "candidate_compressed_answer": "Queen In-hyun's Man"
+        }
+      ]
+    },
+    {
+      "metric": "token_f1",
+      "current_reader": "qwen/qwen-2.5-7b-instruct",
+      "candidate_reader": "meta-llama/llama-3.3-70b-instruct",
+      "rows": 100,
+      "current_raw": 0.6477857142857143,
+      "current_compressed": 0.7606666666666668,
+      "current_compression_gain": 0.11288095238095253,
+      "candidate_raw": 0.7423333333333333,
+      "candidate_compressed": 0.8046190476190476,
+      "candidate_compression_gain": 0.06228571428571428,
+      "raw_upgrade": 0.09454761904761899,
+      "compressed_upgrade": 0.04395238095238074,
+      "upgrade_retention": 0.4648703097456541,
+      "raw_upgrade_interval": [
+        0.013994047619047614,
+        0.18268035714285705
+      ],
+      "compressed_upgrade_interval": [
+        -0.010220238095238091,
+        0.10296428571428566
+      ],
+      "retention_interval": [
+        -0.0969094671751312,
+        1.3050515770602764
+      ],
+      "order_reversed": false,
+      "current_rescue": null,
+      "current_damage": null,
+      "candidate_rescue": null,
+      "candidate_damage": null,
+      "retention_alert_threshold": 0.75,
+      "outcome": "observed-upgrade-attenuated",
+      "panel": null,
+      "slices": [
+        {
+          "metric": "token_f1",
+          "field": "question_type",
+          "value": "bridge",
+          "rows": 82,
+          "raw_upgrade": 0.1254645760743322,
+          "compressed_upgrade": 0.05156794425087107,
+          "retention": 0.411015968525804
+        },
+        {
+          "metric": "token_f1",
+          "field": "question_type",
+          "value": "comparison",
+          "rows": 18,
+          "raw_upgrade": -0.0462962962962963,
+          "compressed_upgrade": 0.009259259259259257,
+          "retention": null
+        },
+        {
+          "metric": "token_f1",
+          "field": "difficulty",
+          "value": "hard",
+          "rows": 100,
+          "raw_upgrade": 0.09454761904761906,
+          "compressed_upgrade": 0.043952380952380944,
+          "retention": 0.46487030974565585
+        }
+      ],
+      "changed_examples": []
+    },
+    {
+      "metric": "judge_match",
+      "current_reader": "qwen/qwen-2.5-7b-instruct",
+      "candidate_reader": "meta-llama/llama-3.3-70b-instruct",
+      "rows": 100,
+      "current_raw": 0.76,
+      "current_compressed": 0.89,
+      "current_compression_gain": 0.13,
+      "candidate_raw": 0.88,
+      "candidate_compressed": 0.93,
+      "candidate_compression_gain": 0.050000000000000044,
+      "raw_upgrade": 0.12,
+      "compressed_upgrade": 0.040000000000000036,
+      "upgrade_retention": 0.33333333333333365,
+      "raw_upgrade_interval": [
+        0.03,
+        0.21
+      ],
+      "compressed_upgrade_interval": [
+        -0.02,
+        0.1
+      ],
+      "retention_interval": [
+        -0.23076923076923075,
+        1.0
+      ],
+      "order_reversed": false,
+      "current_rescue": 0.17,
+      "current_damage": 0.05263157894736842,
+      "candidate_rescue": 0.07,
+      "candidate_damage": 0.022727272727272728,
+      "retention_alert_threshold": 0.75,
+      "outcome": "observed-upgrade-attenuated",
+      "panel": null,
+      "slices": [
+        {
+          "metric": "judge_match",
+          "field": "question_type",
+          "value": "bridge",
+          "rows": 82,
+          "raw_upgrade": 0.13414634146341464,
+          "compressed_upgrade": 0.036585365853658534,
+          "retention": 0.2727272727272727
+        },
+        {
+          "metric": "judge_match",
+          "field": "question_type",
+          "value": "comparison",
+          "rows": 18,
+          "raw_upgrade": 0.05555555555555555,
+          "compressed_upgrade": 0.05555555555555555,
+          "retention": 1.0
+        },
+        {
+          "metric": "judge_match",
+          "field": "difficulty",
+          "value": "hard",
+          "rows": 100,
+          "raw_upgrade": 0.12,
+          "compressed_upgrade": 0.04,
+          "retention": 0.33333333333333337
+        }
+      ],
+      "changed_examples": []
+    }
+  ],
+  "provenance": {
+    "candidate_pools": 100,
+    "compressed_artifacts": 100,
+    "unique_compressed_artifact_hashes": 100,
+    "exact_reader_footprints": true,
+    "compressor_id": "llm-summary:qwen/qwen3-14b",
+    "adapter_provenance": {
+      "compressor": {
+        "type": "openai_compatible",
+        "endpoint": "chat_completions",
+        "role": "compressor",
+        "model": "qwen/qwen3-14b",
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "parameters": {
+          "temperature": 0,
+          "max_tokens": 1024,
+          "extra_body": {
+            "usage": {
+              "include": true
+            },
+            "reasoning": {
+              "enabled": false
+            }
+          }
+        },
+        "header_names": [],
+        "system_prompt_hash": "sha256:7c6f6393ea68f129ef2a2b2c1f8abf50fde1aa5d12bbbd29256adcce355cd233",
+        "user_prompt_template_hash": "sha256:bb65418faf2bbc3852923e38648a8f5d74f66b41af7425aebd9490f6115cca25"
+      },
+      "readers": {
+        "current": {
+          "type": "openai_compatible",
+          "endpoint": "chat_completions",
+          "role": "reader",
+          "model": "qwen/qwen-2.5-7b-instruct",
+          "base_url": "https://openrouter.ai/api/v1",
+          "api_key_env": "OPENROUTER_API_KEY",
+          "parameters": {
+            "temperature": 0,
+            "max_tokens": 64,
+            "extra_body": {
+              "usage": {
+                "include": true
+              }
+            }
+          },
+          "header_names": [],
+          "system_prompt_hash": "sha256:0dd6009539a10ed1c1b30b0e16048f07f8f8a0550872b3e91c6dcb5ef0c29aad",
+          "user_prompt_template_hash": "sha256:0dc3f188b1339afc1b23a1806f60a75391a6d9517fce898298af137d49a61cda"
+        },
+        "candidate": {
+          "type": "openai_compatible",
+          "endpoint": "chat_completions",
+          "role": "reader",
+          "model": "meta-llama/llama-3.3-70b-instruct",
+          "base_url": "https://openrouter.ai/api/v1",
+          "api_key_env": "OPENROUTER_API_KEY",
+          "parameters": {
+            "temperature": 0,
+            "max_tokens": 64,
+            "extra_body": {
+              "usage": {
+                "include": true
+              }
+            }
+          },
+          "header_names": [],
+          "system_prompt_hash": "sha256:0dd6009539a10ed1c1b30b0e16048f07f8f8a0550872b3e91c6dcb5ef0c29aad",
+          "user_prompt_template_hash": "sha256:0dc3f188b1339afc1b23a1806f60a75391a6d9517fce898298af137d49a61cda"
+        }
+      },
+      "judges": {
+        "judge_match": {
+          "type": "openai_compatible",
+          "endpoint": "chat_completions",
+          "role": "judge",
+          "model": "openai/gpt-4.1-mini",
+          "base_url": "https://openrouter.ai/api/v1",
+          "api_key_env": "OPENROUTER_API_KEY",
+          "parameters": {
+            "temperature": 0,
+            "max_tokens": 4,
+            "extra_body": {
+              "usage": {
+                "include": true
+              }
+            }
+          },
+          "header_names": [],
+          "system_prompt_hash": "sha256:bd92dcaad19d9176dc73bb552ba940ada99b2d737c451289ceca1ea3aa034a30",
+          "user_prompt_template_hash": "sha256:54174499e35bfc613c54c801e7035dc2a58178236b590606c840b1f8d76fc0c6"
+        }
+      }
+    },
+    "raw_policy_id": "hotpotqa-distractor-10",
+    "artifact_manifest": "examples/openrouter-hotpotqa/audit/artifact_manifest.jsonl",
+    "artifacts_reused": 0
+  },
+  "resource_summary": {
+    "mean_compressor_latency_ms": 4586.743099121377,
+    "mean_raw_reader_latency_ms": 795.7096148311393,
+    "mean_compressed_reader_latency_ms": 598.8357487489702,
+    "reported_cost_usd": 0.06804802100000001,
+    "compressor_calls_this_run": 100,
+    "reader_calls_this_run": 400,
+    "workers": 8
+  },
+  "run": {
+    "seed": 20260821,
+    "bootstrap_draws": 2000,
+    "minimum_raw_gap": 0.05,
+    "workers": 8,
+    "reuse_artifacts": true,
+    "reuse_answers": true,
+    "call_cache": "examples/openrouter-hotpotqa/audit/call_cache.jsonl"
+  },
+  "scope": "Observed readers and stored compile-once artifacts only; no inference to unseen readers or future artifact draws.",
+  "output_dir": "examples/openrouter-hotpotqa/audit"
+}

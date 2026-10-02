@@ -1,0 +1,43 @@
+version: 1
+
+dataset:
+  path: eval.jsonl
+  name: quickstart-qa
+  description: Local example for validating a ragscale installation.
+  hint_fields: [question_type, domain, difficulty]
+  minimum_slice_rows: 1
+  hints:
+    source: bundled-example
+    language: en
+
+pipeline:
+  raw_policy_id: candidate-pool-v1
+  compressor:
+    id: first-document-compressor
+    callable: adapters:compress
+
+readers:
+  current:
+    name: current-reader
+    family: demo-current
+    callable: adapters:current_reader
+  candidate:
+    name: candidate-reader
+    family: demo-candidate
+    callable: adapters:candidate_reader
+
+comparison:
+  current: current
+  candidate: candidate
+
+scoring:
+  metrics: [exact_match, token_f1]
+
+run:
+  output_dir: audit
+  bootstrap_draws: 100
+  seed: 7
+  retention_alert_threshold: 0.75
+  store_artifact_text: true
+  reuse_artifacts: true
+  fail_on_outcomes: []

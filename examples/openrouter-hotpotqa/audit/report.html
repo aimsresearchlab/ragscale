@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ragscale audit</title>
+<style>
+body{font:15px/1.5 system-ui;color:#18212f;max-width:1100px;margin:40px auto;padding:0 24px}
+h1,h2{letter-spacing:-.02em} table{border-collapse:collapse;width:100%;margin:16px 0 28px}
+th,td{border-bottom:1px solid #d8dee8;padding:9px;text-align:left} th{background:#f3f6fa}
+code{background:#eef2f7;padding:2px 5px;border-radius:4px} .scope{background:#f6f8fa;padding:16px;border-radius:8px}
+</style></head><body>
+<h1>ragscale reader-upgrade audit</h1>
+<p><strong>hotpotqa-demo-100</strong>, 100 examples<br>
+qwen/qwen-2.5-7b-instruct → meta-llama/llama-3.3-70b-instruct</p>
+<p>Illustration only. First 100 rows of the paper&#x27;s frozen HotpotQA distractor slice, one fresh LLM-summary artifact per row, two hosted readers. Not paper evidence and not a verdict about other readers or compressors.</p>
+<h2>Decision summary</h2>
+<table><thead><tr><th>Metric</th><th>Current compression gain</th><th>Raw reader upgrade</th>
+<th>Visible compressed upgrade</th><th>Retention</th><th>Outcome</th></tr></thead><tbody><tr><td>exact_match</td><td>11.0pp</td><td>9.0pp</td><td>3.0pp</td><td>33.3%</td><td><code>observed-upgrade-attenuated</code></td></tr><tr><td>token_f1</td><td>11.3pp</td><td>9.5pp</td><td>4.4pp</td><td>46.5%</td><td><code>observed-upgrade-attenuated</code></td></tr><tr><td>judge_match</td><td>13.0pp</td><td>12.0pp</td><td>4.0pp</td><td>33.3%</td><td><code>observed-upgrade-attenuated</code></td></tr></tbody></table>
+<p>Deployment utility and reader-upgrade fidelity are separate outcomes.</p>
+<h2>Question and dataset slices</h2>
+<table><thead><tr><th>Metric</th><th>Hint</th><th>Value</th><th>Rows</th><th>Raw upgrade</th>
+<th>Compressed upgrade</th><th>Retention</th></tr></thead><tbody><tr><td>exact_match</td><td>question_type</td><td>bridge</td><td>82</td><td>13.4pp</td><td>4.9pp</td><td>36.4%</td></tr><tr><td>exact_match</td><td>question_type</td><td>comparison</td><td>18</td><td>-11.1pp</td><td>-5.6pp</td><td>50.0%</td></tr><tr><td>exact_match</td><td>difficulty</td><td>hard</td><td>100</td><td>9.0pp</td><td>3.0pp</td><td>33.3%</td></tr><tr><td>token_f1</td><td>question_type</td><td>bridge</td><td>82</td><td>12.5pp</td><td>5.2pp</td><td>41.1%</td></tr><tr><td>token_f1</td><td>question_type</td><td>comparison</td><td>18</td><td>-4.6pp</td><td>0.9pp</td><td>not admissible</td></tr><tr><td>token_f1</td><td>difficulty</td><td>hard</td><td>100</td><td>9.5pp</td><td>4.4pp</td><td>46.5%</td></tr><tr><td>judge_match</td><td>question_type</td><td>bridge</td><td>82</td><td>13.4pp</td><td>3.7pp</td><td>27.3%</td></tr><tr><td>judge_match</td><td>question_type</td><td>comparison</td><td>18</td><td>5.6pp</td><td>5.6pp</td><td>100.0%</td></tr><tr><td>judge_match</td><td>difficulty</td><td>hard</td><td>100</td><td>12.0pp</td><td>4.0pp</td><td>33.3%</td></tr></tbody></table>
+<h2>Provenance and resources</h2>
+<ul><li>100 candidate pools</li>
+<li>100 compile-once artifact rows</li>
+<li>100 unique compressed content hashes</li>
+<li>Exact reader footprints: true</li>
+<li>Mean compressor latency: 4586.7 ms</li>
+<li>Adapter-reported cost: $0.0680</li></ul>
+<p class="scope">Observed readers and stored compile-once artifacts only; no inference to unseen readers or future artifact draws.</p>
+</body></html>

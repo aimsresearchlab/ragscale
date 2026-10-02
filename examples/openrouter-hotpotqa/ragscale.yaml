@@ -1,0 +1,107 @@
+version: 1
+
+# Key-only demonstration. Set OPENROUTER_API_KEY and run: ragscale run ragscale.yaml
+# Every compressor and reader call goes to https://openrouter.ai/api/v1.
+# This run is an illustration on one fresh summary draw and two readers. It is
+# not evidence about any other reader, compressor, or benchmark. Replace the
+# compressor and readers with your deployed pipeline for a real audit.
+
+dataset:
+  path: hotpotqa_demo_100.jsonl
+  name: hotpotqa-demo-100
+  description: >-
+    Illustration only. First 100 rows of the paper's frozen HotpotQA distractor
+    slice, one fresh LLM-summary artifact per row, two hosted readers. Not
+    paper evidence and not a verdict about other readers or compressors.
+  hint_fields: [question_type, difficulty]
+  minimum_slice_rows: 10
+  hints:
+    source: hotpotqa_distractor_500_v1
+    language: en
+
+pipeline:
+  raw_policy_id: hotpotqa-distractor-10
+  compressor:
+    id: llm-summary:qwen/qwen3-14b
+    type: openai_compatible
+    model: qwen/qwen3-14b
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    parameters:
+      temperature: 0
+      max_tokens: 1024
+      # OpenRouter-specific: keep hidden reasoning out of the summary budget.
+      extra_body:
+        usage:
+          include: true
+        reasoning:
+          enabled: false
+    # Qwen3 prompt switch; some providers ignore the reasoning flag above.
+    user_prompt_template: |-
+      Question:
+      {question}
+
+      Evidence:
+      {evidence}
+
+      /no_think
+
+readers:
+  current:
+    name: qwen/qwen-2.5-7b-instruct
+    family: qwen
+    type: openai_compatible
+    model: qwen/qwen-2.5-7b-instruct
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    parameters:
+      temperature: 0
+      max_tokens: 64
+      extra_body:
+        usage:
+          include: true
+  candidate:
+    name: meta-llama/llama-3.3-70b-instruct
+    family: meta-llama
+    type: openai_compatible
+    model: meta-llama/llama-3.3-70b-instruct
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    parameters:
+      temperature: 0
+      max_tokens: 64
+      extra_body:
+        usage:
+          include: true
+
+comparison:
+  current: current
+  candidate: candidate
+
+scoring:
+  metrics:
+    - exact_match
+    - token_f1
+    # Model judge for free-form answers, enabled for this committed example.
+    - name: judge_match
+      type: openai_compatible
+      model: openai/gpt-4.1-mini
+      base_url: https://openrouter.ai/api/v1
+      api_key_env: OPENROUTER_API_KEY
+      parameters:
+        temperature: 0
+        max_tokens: 4
+        extra_body:
+          usage:
+            include: true
+run:
+  output_dir: audit
+  bootstrap_draws: 2000
+  seed: 20260821
+  minimum_raw_gap: 0.05
+  retention_alert_threshold: 0.75
+  workers: 8
+  store_artifact_text: true
+  reuse_artifacts: true
+  reuse_answers: true
+  fail_on_outcomes: []

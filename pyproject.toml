@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ragscale"
+version = "0.5.1"
+description = "Research tools for auditing how fixed RAG evidence policies change reader comparisons"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.21",
+    "pandas>=1.4",
+    "PyYAML>=6.0",
+    "openai>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+ragscale = "ragscale.cli:main"
+
+[tool.setuptools]
+packages = ["ragscale", "ragscale.data"]
+package-dir = {"ragscale" = "src/ragscale", "ragscale.data" = "data"}
+
+[tool.setuptools.package-data]
+"ragscale.data" = ["interaction_matrix.csv.gz", "hotpotqa_demo_100.jsonl"]

@@ -1,0 +1,3 @@
+- [ ] No-gold mode: report per-reader answer-change rate under compression, with an optional judge for rescue and damage, so teams without reference answers can run the audit.
+- [ ] Raw replay floor for two readers: an optional second raw pass to show how often the pair reverses under raw evidence alone.
+- [ ] Pairwise or rubric judge mode for long-form answers.
