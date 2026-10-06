@@ -5,9 +5,11 @@ comparison. It keeps deployment utility separate from reader-upgrade fidelity:
 a compressor can improve the current complete pipeline while hiding or
 reversing an upgrade to a candidate reader.
 
-The package accompanies *Compression Is Not Evaluation-Neutral: Fixed RAG
-Compression Can Distort Reader Comparisons*. It also bundles the paper's
-176,864-row interaction matrix.
+The package accompanies *[Compression Is Not Evaluation-Neutral: Fixed RAG
+Compression Can Distort Reader Comparisons](https://arxiv.org/abs/2606.21807)*
+(arXiv:2606.21807). It also bundles the paper's 176,864-row interaction matrix,
+which is also on Hugging Face as
+[vein05/ragscale-interaction-matrix](https://huggingface.co/datasets/vein05/ragscale-interaction-matrix).
 
 ## What the paper finds
 
@@ -442,6 +444,14 @@ from ragscale import load_interaction_matrix
 matrix = load_interaction_matrix()
 ```
 
+The same file is on Hugging Face, byte-identical to `data/interaction_matrix.csv.gz`:
+
+```python
+from datasets import load_dataset
+
+matrix = load_dataset("vein05/ragscale-interaction-matrix", split="train")
+```
+
 `data/README_DATA.md` gives the column schema. The matrix records stored
 binary outcomes per benchmark item, reader, and method label. A shared method
 label does not prove two readers saw byte-identical compressed evidence, so
@@ -471,6 +481,21 @@ and replays readers, `analysis.py` computes the pair statistics, `reports.py`
 writes the outputs, `presets.py` holds the starter projects, and `runner.py`
 joins them. `replay.py` is the panel audit used for the paper validation; its
 statistics are unchanged since 0.2.0, and 0.5.1 added only the metric selector.
+
+## Citation
+
+```bibtex
+@misc{panthi2026ragcompression,
+  title         = {Compression Is Not Evaluation-Neutral: Fixed {RAG} Compression Can Distort Reader Comparisons},
+  author        = {Panthi, Sugam and Abdelfattah, Rabab},
+  year          = {2026},
+  eprint        = {2606.21807},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL},
+  doi           = {10.48550/arXiv.2606.21807},
+  url           = {https://arxiv.org/abs/2606.21807}
+}
+```
 
 ## License
 
