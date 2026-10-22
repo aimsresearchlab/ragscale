@@ -1,131 +1,144 @@
 # ragscale
 
-`ragscale` audits whether a deployed RAG compression layer preserves a reader
-comparison. It keeps deployment utility separate from reader-upgrade fidelity:
-a compressor can improve the current complete pipeline while hiding or
-reversing an upgrade to a candidate reader.
+Many RAG systems shorten the retrieved passages with a compressor before the
+answering model sees them. `ragscale` checks whether that compressor changes
+how two answering models compare. Each model answers the same questions twice:
+once with the raw passages and once with the same stored compressed text.
+`ragscale` then reports how much of the raw gap between the two models is
+still visible after compression.
 
-The package accompanies *[Compression Is Not Evaluation-Neutral: Fixed RAG
-Compression Can Distort Reader Comparisons](https://arxiv.org/abs/2606.21807)*
-(arXiv:2606.21807). It also bundles the paper's 176,864-row interaction matrix,
-which is also on Hugging Face as
+The package accompanies the paper *[Compression Is Not Evaluation-Neutral:
+Fixed RAG Compression Can Distort Reader Comparisons](https://arxiv.org/abs/2606.21807)*
+(arXiv:2606.21807). It also ships the paper's 176,864-row interaction matrix,
+which is on Hugging Face as
 [vein05/ragscale-interaction-matrix](https://huggingface.co/datasets/vein05/ragscale-interaction-matrix).
 
-## What the paper finds
+## Overview
 
-RAG evaluations often compare readers (answer models) after a compressor has
-already shortened or rewritten their evidence. That mixes two questions:
+Start here:
 
-- **Deployment utility:** which complete pipeline scores best?
-- **Upgrade fidelity:** how much of a reader upgrade survives the compressor?
+- [What the paper found](#what-the-paper-found): the main result in one figure.
+- [Install](#install): clone and install.
+- [Quick start](#quick-start): a first run in one minute, with no API key.
 
-The paper measures the second question directly. Within each panel, the
-questions, candidate passages, prompt, and scoring rule stay fixed. The
-compressor runs once per question, and every reader receives the same stored,
-hash-checked compressed text. Each reader answers twice: once with the raw
-candidate passages and once with that compressed text.
+Then pick your path:
 
-*Upgrade retention* is the compressed upgrade divided by the raw upgrade. A
-10 pp raw upgrade that falls to 3 pp has 30% retention.
+| I want to... | Go to |
+|---|---|
+| Test my own compressor and models | [Audit your own pipeline](#audit-your-own-pipeline) |
+| Try it on real data with only an API key | [Run with an API key](#run-with-an-api-key) |
+| Analyze scores I already have | [Already have scores](#already-have-scores) |
+| Use the paper's data | [Use the paper's data](#use-the-papers-data) |
 
-### One useful compressor hides most of a reader upgrade
+Reference: [Terms](#terms), [Configuration](#configuration),
+[Dataset format](#dataset-format), [Adapters](#adapters), [Scoring](#scoring),
+[Reading the report](#reading-the-report), [Development](#development),
+[Citation](#citation), [License](#license)
+
+## Terms
+
+| Term | Meaning |
+|---|---|
+| Reader | The model that answers the question from the evidence. |
+| Compressor | The step that shortens or rewrites the retrieved passages, for example an LLM summary, RECOMP or LLMLingua. |
+| Raw evidence | The retrieved passages before compression. |
+| Upgrade | The score gap between a current reader and a candidate reader. |
+| Upgrade retention | The upgrade under compressed evidence divided by the upgrade under raw evidence. A 10 pp raw upgrade that falls to 3 pp has 30% retention. |
+| Rescue / damage | Compression *rescues* an answer that was wrong with raw evidence and becomes right. It *damages* an answer that was right and becomes wrong. |
+
+## What the paper found
 
 ![Same 500 HotpotQA rows: the raw gap between the lowest- and highest-scoring readers is 31.8 pp; under one stored RECOMP output it is 7.8 pp.](docs/figures/reader_replay.png)
 
-On 500 HotpotQA questions, the lowest- and highest-scoring raw readers are
-31.8 pp apart. Under one stored RECOMP output, they are 7.8 pp apart. RECOMP
-raises the lower reader by 23.8 pp and changes the higher reader by -0.2 pp,
-so 75% of the upgrade disappears. The compressor helps the weaker pipeline
-without preserving the reader comparison.
+On 500 HotpotQA questions, the lowest- and highest-scoring readers are 31.8 pp
+apart with raw passages. With one stored RECOMP compression, they are 7.8 pp
+apart, so about 75% of the gap disappears. Every panel with at least eight
+readers loses part of the gap, and how much depends on the compressor. A
+compressor can raise average accuracy and still hide most of a reader upgrade.
 
-### Lower raw-scoring readers gain more
+So when you compare two readers behind a compressor, run both on raw evidence
+and on the same stored compressed text, and report how much of the upgrade
+survives. That is the audit `ragscale` runs. The numbers, controls and scope
+are in the [paper](https://arxiv.org/abs/2606.21807).
 
-![Raw versus compressed score for every reader on HotpotQA (RECOMP) and MuSiQue (shared summary), under EM and F1. Fitted lines are flatter than the diagonal.](docs/figures/scaling_collapse.png)
+## Install
 
-Each point is one reader under raw and byte-identical compressed evidence. If
-every reader gained the same amount, the points would sit on a line parallel
-to the diagonal. Instead the curves flatten.
+`ragscale` needs Python 3.10 or newer. It is not on PyPI, so install it from
+a clone:
 
-| Benchmark | Panel | Metric | Readers | Raw upgrade (pp) | Compressed (pp) | Retained (%) |
-|---|---|---|---:|---:|---:|---:|
-| HotpotQA | main | EM | 20 | 31.8 | 7.8 | 24.5 [-0.7, 37.9] |
-| HotpotQA | main | F1 | 20 | 34.7 | 8.5 | 24.5 [5.0, 34.4] |
-| MuSiQue | main | EM | 15 | 15.4 | 0.6 | 3.9 [-35.0, 85.7] |
-| MuSiQue | main | F1 | 15 | 18.7 | 0.1 | 0.8 [-11.7, 27.0] |
-| MuSiQue | four summaries | EM | 10 | 13.8 | 7.4-8.6 | 53.6-62.3 |
-| MuSiQue | four summaries | F1 | 10 | 15.6 | 8.4-11.9 | 54.0-76.4 |
-
-Brackets are family-by-row intervals for one stored artifact. HotpotQA and
-MuSiQue are the main benchmarks, analyzed under a plan fixed in advance.
-
-### Attenuation varies by compressor
-
-Every panel with at least eight readers attenuates the upgrade, by different
-amounts. Exact-match retention runs from 13.4% (NQ-Open, RECOMP top-5) to
-83.6% (HotpotQA, EXIT); LongMemEval's semantic score reaches 4.5%. Average
-gain and retention do not track each other. On HotpotQA, a shared summary
-raises the panel mean by 13.6 pp but retains 18.1% of the upgrade. EXIT
-raises the mean by 1.7 pp and retains 83.6%. An accuracy check alone cannot
-tell you whether a compressor preserves a reader comparison.
-
-Controls: choosing endpoints on one half of the questions and scoring on the
-other still attenuates. On a twelve-reader LongMemEval panel, swapping in a
-dense retriever changes 45.9% of the candidates but keeps 92.3% of the
-upgrade, while fixed compression on the same panel keeps 53.8%.
-
-### Reader pairs change order more often
-
-![Left: pair reversal rates from changing only the raw question half versus under compression. Right: the MuSiQue F1 shortlist winner changes under compressed evidence.](docs/figures/excess_flips.png)
-
-Changing only the raw question half reverses a median 1.5% of eligible
-HotpotQA pairs and none on MuSiQue. Compression adds 16.7 pp to the reversal
-rate on HotpotQA, and 32.7 pp (EM) and 21.2 pp (F1) on MuSiQue. Of the
-HotpotQA pairs that differ significantly under raw evidence (exact McNemar,
-p < .05, 250 questions), only 41.7% still differ in the same direction under
-compression; on MuSiQue, 27.6%. On MuSiQue F1, the raw winner is DeepSeek R1
-Distill Llama 70B but the compressed shortlist winner is GPT-4.1-mini.
-
-### Rescue and damage coexist inside the average
-
-Compression *rescues* a raw-wrong answer when it becomes correct and *damages*
-a raw-correct answer when it becomes wrong. On HotpotQA, 19.1% of row-reader
-pairs are rescued and 35.7% of raw-correct pairs are damaged. On MuSiQue the
-figures are 22.9% and 33.8%. The balance differs by reader, which is how a
-higher average and a smaller upgrade coexist.
-
-### What to do
-
-For a declared reader change, run both readers on raw evidence and on the same
-stored compressed text, and report how much of the upgrade survives. A
-pairwise decision needs those two readers. A claim about a model family needs
-a panel that spans the family: a three-reader shortcut (lowest, middle, and
-highest raw scorer) caught only 1.9-8.5% of the broader panel's reversals.
-`ragscale` runs this audit.
-
-### Scope
-
-Claims cover the observed readers, prompts, evidence policies, and stored
-artifacts. Panels are nonrandom and exclude readers below 7B. There are no
-production A/B logs or causal mechanism tests. A predictor fixed in advance
-from raw reader spacing and compressor class did worse than raw spacing alone,
-so each deployment still needs its own audit.
+```bash
+git clone https://github.com/aimsresearchlab/ragscale.git
+cd ragscale
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+```
 
 ## Quick start
 
 ```bash
-python -m pip install -e ".[dev]"
 ragscale init --output my-audit
 ragscale run my-audit/ragscale.yaml
 ```
 
-The starter contains a YAML configuration, a JSONL evaluation set, and three
-plain Python adapter functions. Replace those functions with wrappers around a
-deployed compressor and the current and candidate readers.
+`init` writes a starter project with three files:
 
-### Key-only run
+- `eval.jsonl`: two toy questions with their candidate passages;
+- `adapters.py`: a toy compressor and two toy readers, written as plain
+  Python functions;
+- `ragscale.yaml`: the configuration that connects them.
 
-With only an OpenRouter or OpenAI key, the hosted preset runs the whole
-pipeline on 100 bundled HotpotQA rows with no Python adapters:
+`run` writes its results to `my-audit/audit/`. Open `REPORT.md` there. The
+first table, **Decision summary**, has one row per metric:
+
+| Column | Meaning |
+|---|---|
+| Current compression gain | Compressed minus raw score for the current reader. |
+| Raw reader upgrade | Candidate minus current reader, with raw evidence. |
+| Visible compressed upgrade | The same gap, with compressed evidence. |
+| Upgrade retention | Compressed upgrade divided by raw upgrade. |
+| Outcome | One of the four labels in [Reading the report](#reading-the-report). |
+
+The toy run reports a 50 pp raw upgrade and a 0 pp compressed upgrade. That
+comes from two hand-written questions and means nothing. It only shows that
+the pipeline works end to end.
+
+## Audit your own pipeline
+
+1. Replace `eval.jsonl` with your questions and passages
+   ([Dataset format](#dataset-format)).
+2. Replace the three functions in `adapters.py` with wrappers around your
+   compressor and your current and candidate readers ([Adapters](#adapters)).
+3. Run `ragscale run my-audit/ragscale.yaml`.
+
+The smallest configuration that runs names only the dataset, the compressor
+and two readers:
+
+```yaml
+dataset:
+  path: eval.jsonl
+pipeline:
+  compressor:
+    callable: adapters:compress
+readers:
+  current:
+    callable: adapters:current_reader
+  candidate:
+    callable: adapters:candidate_reader
+```
+
+Every other field has a default ([Configuration](#configuration)). To compare
+more than two readers, add more entries under `readers`. The report's main
+table still compares the two readers named in `comparison`, which default to
+`current` and `candidate`.
+
+If your models are behind an OpenAI-compatible API, you can skip the Python
+adapters ([OpenAI-compatible endpoints](#openai-compatible-endpoints)).
+
+## Run with an API key
+
+With only an OpenRouter or OpenAI key, a preset runs the whole pipeline on
+100 bundled HotpotQA questions:
 
 ```bash
 export OPENROUTER_API_KEY=...
@@ -134,44 +147,90 @@ ragscale run demo/ragscale.yaml
 ```
 
 `--preset openai` does the same against `api.openai.com` with
-`OPENAI_API_KEY`. The preset compiles one LLM summary per row, replays two
-hosted readers under raw and compressed evidence, and writes the report to
-`demo/audit/`. It is an illustration on one fresh summary draw. It is not
-evidence about other readers or compressors, and the report header says so.
-A committed run is in `examples/openrouter-hotpotqa/`.
+`OPENAI_API_KEY`. The preset writes one LLM summary per question, runs two
+hosted readers on raw and compressed evidence, and writes the report to
+`demo/audit/`.
 
-A 100-row pair audit makes 100 compressor calls and 400 reader calls, plus
-400 judge calls if a model judge is enabled. Calls run in parallel
-(`run.workers`) and every answer is checkpointed to `call_cache.jsonl`, so an
-interrupted run resumes without repeating calls.
+A 100-question run makes 100 compressor calls and 400 reader calls, plus 400
+judge calls if the model judge is on. The committed example in
+[`examples/openrouter-hotpotqa/`](examples/openrouter-hotpotqa/) took 2 minutes
+20 seconds and reported $0.09 in cost. Calls run in parallel (`run.workers`).
+Every answer is saved to `call_cache.jsonl`, so an interrupted run resumes
+without repeating calls.
 
-The compressor runs once per item. `ragscale` stores a content hash for that
-artifact, then passes the same compressed evidence to every configured reader.
-Raw and compressed conditions use the same candidate pool and question.
+This run is an illustration on one fresh summary draw. It is not evidence
+about other readers or compressors, and its report says so.
 
-The command writes:
+## Already have scores
 
-- `summary.json`, the machine-readable audit;
-- `REPORT.md` and `report.html`, the human report;
-- `paired_scores.csv`, suitable for `replay-audit` or external analysis;
-- `records.jsonl`, with scores, answers, hints, provenance, latency, tokens,
-  and reported cost.
-- `artifact_manifest.jsonl`, written after compilation and before reader
-  replay, with candidate-pool and artifact hashes.
-
-Teams that already have paired scores can skip execution:
+If you already have each reader's score on raw and compressed evidence, skip
+the pipeline:
 
 ```bash
 ragscale replay-audit --input paired_scores.csv --metric exact_match --output audit/
 ```
 
-`paired_scores.csv` holds one row per metric, so `--metric` names the one to
-audit; a file with a single metric needs no flag. This command accepts two
-readers or a larger panel. The result describes the
-supplied readers only. No fixed reader count is treated as sufficient for
-unseen readers.
+The CSV needs one row per question and reader, with these columns:
 
-## YAML configuration
+| Column | Meaning |
+|---|---|
+| `example_id` | Question ID |
+| `reader` | Reader name |
+| `reader_family` | Model family of the reader |
+| `raw_score` | Score with raw evidence, in [0, 1] |
+| `compressed_score` | Score with compressed evidence, in [0, 1] |
+| `candidate_pool_id` | ID of the passages the question was given |
+| `compressed_artifact_hash` | Hash of the compressed text |
+| `raw_policy_id` | Name of the raw evidence setup |
+| `metric` | Metric name |
+
+For each question, every reader must have the same `candidate_pool_id` and
+`compressed_artifact_hash`. Every reader must cover the same questions. The
+file needs at least two readers and one `raw_policy_id`. If it holds several
+metrics, `--metric` picks one. The `paired_scores.csv` written by
+`ragscale run` already has this format.
+
+## Use the paper's data
+
+The interaction matrix ships with the package:
+
+```python
+from ragscale import load_interaction_matrix
+
+matrix = load_interaction_matrix()
+```
+
+The same file is on Hugging Face, byte-identical to
+`data/interaction_matrix.csv.gz`:
+
+```python
+from datasets import load_dataset
+
+matrix = load_dataset("vein05/ragscale-interaction-matrix", split="train")
+```
+
+Each row is one question, one reader and one evidence method, with the
+reader's answer and a binary `correct` label. The columns are listed in
+[`data/README_DATA.md`](data/README_DATA.md). For example, to compare each
+reader's HotpotQA accuracy with raw top-k passages and with RECOMP:
+
+```python
+hotpot = matrix[matrix.dataset == "hotpotqa"]
+accuracy = hotpot.pivot_table(
+    index="reader_model", columns="method", values="correct", aggfunc="mean"
+)
+print(accuracy[["naive_top_k", "recomp_top5"]].sort_values("naive_top_k"))
+```
+
+Two rows with the same `method` label do not prove that two readers saw
+byte-identical compressed text. The exact compressed texts and hashes behind
+the paper's headline numbers are in
+[`artifact/iclr_anonymous_artifact_2026-09-12.zip`](artifact/), with
+`HEADLINE_FOOTPRINT_MANIFEST.md` and a `reproduce.py` script inside.
+
+## Configuration
+
+A full configuration with every field:
 
 ```yaml
 version: 1
@@ -222,20 +281,31 @@ run:
   seed: 20260821
 ```
 
-`workers` sets how many adapter calls run at once. `reuse_artifacts` reuses
-compiled artifacts from `artifact_manifest.jsonl` and refuses to continue if
-the candidate pool, raw evidence, or compressor configuration changed.
-`reuse_answers` reuses reader and judge calls from `call_cache.jsonl`, keyed
-by example, reader, condition, evidence hash, and adapter configuration.
-`retention_alert_threshold` is a user setting for the report outcome label.
-No threshold has been validated as a pass or fail rule.
+| Field | Default | Meaning |
+|---|---|---|
+| `dataset.path` | required | JSONL file of questions ([Dataset format](#dataset-format)). |
+| `dataset.name`, `description`, `hints` | none | Labels copied into the report. |
+| `dataset.hint_fields` | `[question_type]` | Fields used to split results into slices. |
+| `dataset.minimum_slice_rows` | 10 | A slice needs this many questions to get its own row in the report. |
+| `pipeline.raw_policy_id` | `raw-evidence-v1` | Name for how the raw passages were retrieved. |
+| `pipeline.compressor` | required | The compressor adapter, plus an optional `id`. |
+| `readers` | required, at least two | One entry per reader: an adapter, plus an optional `name` and `family`. |
+| `comparison` | `current`, `candidate` | The two reader keys compared in the main table. |
+| `scoring.metrics` | `[exact_match, token_f1]` | Metrics to compute ([Scoring](#scoring)). |
+| `run.output_dir` | `ragscale-audit` | Where results go, relative to the YAML file. |
+| `run.bootstrap_draws` | 2000 | Resamples used for the intervals. |
+| `run.minimum_raw_gap` | 0.05 | A raw upgrade smaller than this is reported as `insufficient-raw-separation`. |
+| `run.retention_alert_threshold` | 0.75 | Retention below this is flagged in the report. No threshold has been validated as a pass or fail rule. |
+| `run.workers` | 1 | How many adapter calls run at once. |
+| `run.store_artifact_text` | true | Save the compressed text, not only its hash. |
+| `run.reuse_artifacts` | true | Reuse compressed texts from `artifact_manifest.jsonl`. The run stops if the passages, raw evidence or compressor configuration changed. |
+| `run.reuse_answers` | true | Reuse reader and judge answers from `call_cache.jsonl`. |
+| `run.fail_on_outcomes` | `[]` | Outcomes that make the command exit with status 2, for CI. |
+| `run.seed` | 20260821 | Random seed. |
 
-Paths and adapter imports are resolved from the YAML directory. Add reader
-entries for a fleet audit. The `comparison` block still names the current and
-candidate readers used in the primary decision table.
+Paths and adapter imports are resolved from the YAML file's folder.
 
-For CI, list outcomes that should produce exit status 2 after the report is
-written:
+For CI, list the outcomes that should fail the job:
 
 ```yaml
 run:
@@ -245,9 +315,9 @@ run:
     - insufficient-raw-separation
 ```
 
-## Dataset records and hints
+## Dataset format
 
-Each JSONL line must contain:
+Each JSONL line is one question:
 
 ```json
 {
@@ -265,15 +335,14 @@ Each JSONL line must contain:
 }
 ```
 
-`question_type`, `domain`, `difficulty`, and arbitrary hint fields are carried
-into the audit. The report shows slice-level raw upgrade, compressed upgrade,
-and retention when the slice meets `minimum_slice_rows`. Dataset-level hints
-can record source, language, time window, intended use, or other context.
+`example_id`, `question`, `reference_answers` and `candidate_pool` are
+required. `question_type`, `domain`, `difficulty` and any hint fields are
+carried into the report as slices.
 
-## Adapter contract
+## Adapters
 
-Adapters are ordinary Python callables. A compressor may accept any supported
-subset of `question`, `documents`, `evidence`, `metadata`, and `case`:
+Adapters are plain Python functions. A compressor may take any of
+`question`, `documents`, `evidence`, `metadata` and `case`:
 
 ```python
 def compress(question, documents, metadata):
@@ -281,8 +350,8 @@ def compress(question, documents, metadata):
     return {"text": text, "tokens": 412, "cost_usd": 0.0017}
 ```
 
-A reader may accept any supported subset of `question`, `evidence`, `metadata`,
-`case`, and `condition`:
+A reader may take any of `question`, `evidence`, `metadata`, `case` and
+`condition`:
 
 ```python
 def candidate_reader(question, evidence, metadata, condition):
@@ -290,16 +359,24 @@ def candidate_reader(question, evidence, metadata, condition):
     return {"answer": answer, "tokens": 86, "cost_usd": 0.0021}
 ```
 
-Adapters can return a string or a dictionary containing `text`, `answer`, or
-`output`. Optional `tokens`, `cost_usd`, and `metadata` fields feed the resource
-summary. Wall-clock latency is measured automatically.
+An adapter can return a string or a dictionary with `text`, `answer` or
+`output`. Optional `tokens`, `cost_usd` and `metadata` feed the resource
+summary. Latency is measured automatically.
+
+The compressor runs once per question. `ragscale` stores a hash of its output
+and gives the same compressed text to every reader. Two assumptions are not
+checked:
+
+- The raw branch gives the reader the joined candidate passages in the same
+  prompt template as the compressed branch. If your production raw path
+  formats evidence differently, rebuild it in a Python adapter from `case`.
+- The compressor must not know which reader it serves. A reader-specific
+  compressor breaks the design, and the runner cannot detect it.
 
 ### OpenAI-compatible endpoints
 
-Use `type: openai_compatible` to call Chat Completions without writing Python
-adapters. The API key is read from the named environment variable. Change
-`base_url` to use OpenRouter, a self-hosted gateway, or another compatible
-endpoint.
+Use `type: openai_compatible` to call a Chat Completions API without writing
+Python adapters. The API key is read from the named environment variable.
 
 ```yaml
 pipeline:
@@ -330,57 +407,38 @@ readers:
     api_key_env: OPENROUTER_API_KEY
 ```
 
-Omit `base_url` to use `https://api.openai.com/v1` with `OPENAI_API_KEY`.
-Optional fields include `system_prompt`, `user_prompt_template`, `headers`,
-`timeout`, `max_retries`, and `parameters`. Prompt templates may use
-`{question}`, `{evidence}`, and `{condition}`. The audit records the endpoint,
-configured and returned model identifiers, serving provider when reported,
-response ID, prompt hash, and token usage. It never writes the API key.
-
-Set `temperature: 0` in `parameters` for every hosted adapter. Otherwise the
-pair audit cannot separate reader noise from the compression effect. On
-OpenRouter, `parameters.extra_body.provider` pins the serving provider so the
-raw and compressed branches hit the same backend.
-
-Reasoning models can spend the whole `max_tokens` budget on hidden thinking
-and return no visible text. The adapter retries an empty reply twice
-(`empty_retries`). A reader that still returns nothing is recorded as an
-empty answer with `empty_response: true` in its metadata and scores zero. A
-compressor or judge that returns nothing raises, because an empty artifact or
-verdict would corrupt the audit. The OpenRouter preset disables reasoning in
-the request and appends Qwen's `/no_think` switch to the compressor prompt,
-since some providers ignore the request flag. Upstream rate limits are retried
-with exponential backoff (`rate_limit_retries`).
-
-Two assumptions are not checked by the package. The raw branch feeds the
-joined candidate pool to the reader in the same prompt template as the
-compressed branch; a team whose production raw path formats evidence
-differently should rebuild it inside a Python adapter from `case`. The
-compressor must not see which reader it serves; a reader-adaptive compressor
-breaks the fixed-artifact design and the runner cannot detect it.
+- Omit `base_url` to use `https://api.openai.com/v1` with `OPENAI_API_KEY`.
+- Optional fields: `system_prompt`, `user_prompt_template`, `headers`,
+  `timeout`, `max_retries` and `parameters`. Prompt templates may use
+  `{question}`, `{evidence}` and `{condition}`.
+- Set `temperature: 0` for every hosted adapter. Otherwise reader noise mixes
+  with the compression effect.
+- On OpenRouter, `parameters.extra_body.provider` pins the serving provider,
+  so the raw and compressed runs hit the same backend.
+- Reasoning models can spend the whole `max_tokens` budget on hidden thinking
+  and return no text. An empty reply is retried twice (`empty_retries`). A
+  reader that still returns nothing scores zero and is marked
+  `empty_response: true`. An empty compressor or judge reply stops the run.
+- Rate limits are retried with exponential backoff (`rate_limit_retries`).
+- The audit records the endpoint, the requested and returned model names, the
+  serving provider when reported, the response ID, a prompt hash and token
+  usage. It never writes the API key.
 
 ## Scoring
 
-Built-in scorers are:
+Built-in metrics: `exact_match` (or `em`), `token_f1` (or `f1`),
+`token_precision`, `token_recall`, `rouge_l` and `answer_contains`. Exact match
+and the token metrics lowercase the text, remove punctuation, articles and
+extra spaces, and take the best score over all reference answers.
 
-- `exact_match` or `em`;
-- `token_f1` or `f1`;
-- `token_precision`;
-- `token_recall`;
-- `rouge_l`;
-- `answer_contains`.
+Lexical metrics also punish answer style. A reader that answers in full
+sentences loses exact match to one that gives only the span, and compression
+can change style as well as content. The default reader prompt asks for the
+answer span only. For readers that still explain, add the model judge or a
+custom metric.
 
-Exact match and token scores use lowercase, punctuation, article, and
-whitespace normalization and take the best score across reference aliases.
-
-Lexical scores punish answer style as well as content. A reader that replies
-in full sentences loses exact match to a reader that replies with the span,
-and compression can change style as much as content. The default reader
-prompt therefore asks for the answer span only. For readers that still
-explain, add the model judge below or a custom scorer, and compare the
-lexical and judged rows before reading rescue and damage.
-
-Custom scorers use the same YAML list:
+A custom metric is a function that takes `prediction`, `references` and
+`case` and returns a score in [0, 1]:
 
 ```yaml
 scoring:
@@ -390,15 +448,9 @@ scoring:
       callable: my_metrics:grounded_correctness
 ```
 
-The callable receives `prediction`, `references`, and `case`, and returns a
-score in `[0, 1]`. This supports existing human labels, semantic judges, Ragas
-metrics, or organization-specific release criteria without coupling the core
-package to one provider.
-
 ### Model judge
 
-For free-form answers, an OpenAI-compatible judge scores each answer 0 or 1
-against the references:
+An OpenAI-compatible judge scores each answer 0 or 1 against the references:
 
 ```yaml
 scoring:
@@ -414,58 +466,43 @@ scoring:
         max_tokens: 4
 ```
 
-The judge sees the question, the reference answers, and the prediction. It
-never sees the evidence, so it cannot reward a compressed answer for matching
-the compressed text. A reply that is not a 0/1 verdict raises an error rather
-than becoming a silent score. Judge calls are cached like reader calls, and
-the judge configuration is recorded under `provenance.adapter_provenance`.
+The judge sees the question, the reference answers and the prediction. It
+never sees the evidence, so it cannot reward an answer for copying the
+compressed text. A reply that is not 0 or 1 raises an error. Judge calls are
+cached like reader calls.
 
-## Interpretation
+## Reading the report
 
-The primary report separates:
+`ragscale run` writes these files to the output folder:
 
-1. **Current compression gain:** compressed minus raw score for the current
-   deployed reader.
-2. **Upgrade retention:** the visible compressed current-to-candidate upgrade
-   divided by the raw current-to-candidate upgrade.
+- `REPORT.md` and `report.html`: the report;
+- `summary.json`: the same results in machine-readable form;
+- `paired_scores.csv`: one row per question, reader and metric, the input
+  format for `replay-audit`;
+- `records.jsonl`: scores, answers, hints, provenance, latency, tokens and
+  reported cost;
+- `artifact_manifest.jsonl`: hashes of the passages and compressed texts,
+  written before any reader runs.
 
-Pair results are valid for the observed comparison. They do not screen a
-broader fleet. Panel outputs describe the supplied panel, but `ragscale` does
-not return `safe`, `neutral`, or another verdict about unseen readers or future
-compressor draws.
+The report keeps two questions apart:
 
-## Bundled matrix
+1. **Compression gain:** does the compressor help the current reader?
+2. **Upgrade retention:** how much of the upgrade from the current to the
+   candidate reader is still visible under compression?
 
-The paper's 176,864-row interaction matrix ships with the package:
+Each metric gets one outcome:
 
-```python
-from ragscale import load_interaction_matrix
+| Outcome | Meaning |
+|---|---|
+| `observed-upgrade-preserved` | Retention is at or above `retention_alert_threshold`. |
+| `observed-upgrade-attenuated` | The upgrade keeps its direction but retention is below the threshold. |
+| `observed-order-reversed` | The candidate wins on raw evidence and loses on compressed evidence, or the reverse. |
+| `insufficient-raw-separation` | The raw upgrade is smaller than `minimum_raw_gap`, so retention is not computed. |
 
-matrix = load_interaction_matrix()
-```
-
-The same file is on Hugging Face, byte-identical to `data/interaction_matrix.csv.gz`:
-
-```python
-from datasets import load_dataset
-
-matrix = load_dataset("vein05/ragscale-interaction-matrix", split="train")
-```
-
-`data/README_DATA.md` gives the column schema. The matrix records stored
-binary outcomes per benchmark item, reader, and method label. A shared method
-label does not prove two readers saw byte-identical compressed evidence, so
-join the paper's artifact hashes before any fixed-artifact claim. The earlier
-exploratory helpers that summarized this matrix (correlations, crossover
-estimates, and a verdict string) were removed in 0.5.0.
-
-## Installation
-
-Install from a local checkout of this repository:
-
-```bash
-python -m pip install .
-```
+The report also shows intervals, rescue and damage rates for each reader,
+results by slice, the questions whose outcome changed, and resource use.
+Results describe the readers, questions and compressed texts you supplied.
+`ragscale` gives no verdict about other readers or future compressor runs.
 
 ## Development
 
@@ -475,12 +512,17 @@ python -m pytest -q
 python -m pip wheel . --no-deps --wheel-dir dist
 ```
 
-The CLI has three commands: `init`, `run`, and `replay-audit`. The source is
-split by stage: `config.py` loads the YAML, `execute.py` compiles artifacts
-and replays readers, `analysis.py` computes the pair statistics, `reports.py`
-writes the outputs, `presets.py` holds the starter projects, and `runner.py`
-joins them. `replay.py` is the panel audit used for the paper validation; its
-statistics are unchanged since 0.2.0, and 0.5.1 added only the metric selector.
+The CLI has three commands: `init`, `run` and `replay-audit`.
+
+| File | Role |
+|---|---|
+| `config.py` | Loads the YAML. |
+| `execute.py` | Compresses once per question and runs the readers. |
+| `analysis.py` | Computes the pair statistics. |
+| `reports.py` | Writes the outputs. |
+| `presets.py` | Holds the starter projects. |
+| `runner.py` | Connects the stages. |
+| `replay.py` | The panel audit used to validate the paper; its statistics are unchanged since 0.2.0. |
 
 ## Citation
 
