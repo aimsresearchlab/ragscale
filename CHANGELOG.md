@@ -1,5 +1,9 @@
 # Changelog
 
+## Matrix fix, 2026-10-23
+
+- The 1,436 `dense` rows (LongMemEval with dense retrieval; GPT-4o mini, Llama 3.1 8B and Llama 3.1 70B) now hold the reader's answer to the top-k passages of the dense-retrieval pool. Each dense run stores two answers per question, one to the top-k passages and one to the SIEVE-selected passages, and the matrix builder kept whichever came first in the file. 441 rows held the SIEVE answer; 247 of them had a different answer text and 86 a different `correct` value. Dense accuracy changes from 45.9% to 43.4% for GPT-4o mini and from 47.9% to 47.4% for Llama 3.1 70B; Llama 3.1 8B is unchanged. No other row changes, and the matrix still has 176,864 rows. The paper's dense-retrieval comparison reads the run files by answer type and is not affected.
+
 ## 0.5.1, 2026-09-05
 
 - `replay-audit` accepts `--metric` (`replay_audit(metric=...)`). The `paired_scores.csv` written by `ragscale run` holds one row per metric, so the documented handoff previously failed with "Duplicate example_id and reader keys"; a multi-metric input without a choice now names the available metrics.
